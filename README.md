@@ -1,0 +1,1 @@
+This code implements event-driven simulations of the impact of three probabilities (the probability of becoming homeless, the probability of exiting homelessness, and the probability of a night of homelessness being undetected/unrecorded within an HMIS systems) on systemwide counts of homelessness and chronic homelessness (consecutive versus episodic).
