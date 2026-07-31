@@ -32,7 +32,7 @@ def run_sweep(P_h, P_e, P_u, numsims=5, size_pop=10_000, T=DEFAULT_T,
         for p_h in P_h:
             for p_e in P_e:
                 for p_u in P_u:
-                    seed = None if base_seed is None else hash((base_seed, sim, p_h, p_e, p_u)) & 0xFFFFFFFF     #WTAF
+                    seed = None if base_seed is None else hash((base_seed, sim, p_h, p_e, p_u)) & 0xFFFFFFFF     # "& 0xFFFFFFFF" means seed will only be composed of the lowest 32 bits of the result of hash() operation
                     jobs.append((p_h, p_e, p_u, sim, size_pop, T, seed, record_timeseries, fix_known_bugs))
 
     results = []

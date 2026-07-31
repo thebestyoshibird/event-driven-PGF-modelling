@@ -157,7 +157,7 @@ def _find_undetected_chronic_vectorized(population):
     new_episode_starts = detected_homeless & ~shifted
     detected_num_eps = new_episode_starts.sum(axis=1)
 
-    would_be_missed = (detected_num_eps < 4) | (detected_num_months < 12)     # What is this syntax? What is happening here?
+    would_be_missed = (detected_num_eps < 4) | (detected_num_months < 12)     # "|" with numpy performs an element-wise logical OR. So if either condition is True, would_be_missed is also True.
     n_undetected = int(would_be_missed.sum())
     frac_undetected = n_undetected / len(episodic_people)
     return n_undetected, frac_undetected
