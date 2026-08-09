@@ -1,7 +1,7 @@
 # IMPORTS
 
     # PYTHON LIBRARIES
-
+import sys
 import pickle as pkl
 import numpy as np
 import seaborn as sns
@@ -188,110 +188,120 @@ def plot_undetected_stripplot(summary_df, x_param, hue_param, pu, save_path=None
         fig.savefig(save_path, bbox_inches="tight")
     return fig
 
-# RUN MODEL TO GENERATE DATA
-
-# if __name__ == "__main__":
-#
-#     P_h_example = [0.0025, 0.005, 0.0075, 0.01, 0.0125]
-#     P_e_example = [0.0025, 0.005, 0.0075, 0.01, 0.0125]
-#     P_u_example = [0.0025, 0.005, 0.0075, 0.01, 0.0125]
-#
-#     summary_df, timeseries = run_sweep(
-#         P_h_example, P_e_example, P_u_example,
-#         numsims=10, size_pop=20000, T=DEFAULT_T,
-#         record_timeseries=True, fix_known_bugs=True,
-#         n_workers=None, base_seed=None,
-#     )
-#
-#     save_sweep(summary_df, timeseries, out_dir="sweep_results", tag="pu_pe_ph")
-    # print(summary_df.head())
-
-# IMPORT MODEL DATA
-
-    # summary_df, timeseries = load_sweep(out_dir="sweep_results", tag="pu_pe_ph")
-
-summary_df, timeseries = load_sweep(out_dir="sweep_results", tag="pu_pe_ph")
-
-# CONTROL FOR P_U
-
-# summary_df = summary_df.loc[summary_df['P undetected'] == XXX]
-
 # VISUALIZATIONS
 
     # HEAT MAPS
 
         # FOR VARYING P_H, P_E
-# aggdata = pd.DataFrame(columns = [0.0025, 0.005, 0.0075, 0.01, 0.125])
-# for pu in [0.0025, 0.005, 0.0075, 0.01, 0.0125]:
-#     summary_df_pu = summary_df.loc[summary_df['P undetected'] == pu]
-#     fig1 = plot_heatmap_grid(summary_df_pu, x_param="P homeless", y_param="P exit", pu=pu,
-#                              save_path="images/heatmaps_pe_ph_"+str(pu)+".png")
-
+def heat_map_vary_ph_pe(summary_df):
+    aggdata = pd.DataFrame(columns = [0.0025, 0.005, 0.0075, 0.01, 0.125])
+    for pu in [0.0025, 0.005, 0.0075, 0.01, 0.0125]:
+        summary_df_pu = summary_df.loc[summary_df['P undetected'] == pu]
+        fig1 = plot_heatmap_grid(summary_df_pu, x_param="P homeless", y_param="P exit", pu=pu,
+                                save_path="images/heatmaps_pe_ph_"+str(pu)+".png")
 
         # FOR VARYING P_U
-
-# METRIC_LABELS.update({
-#     "Frac Undetected Chronic": "Undetected chronic (frac. of chronic pop.)",
-# })
-# fig = plot_undetected_heatmap_grid(
-#     summary_df,
-#     x_param="P homeless", y_param="P exit", facet_param="P undetected",
-#     metric="Frac Undetected Chronic", agg="mean", cmap="rocket_r",
-#     save_path="images/undetected_heatmap_grid.png",
-# )
+def heat_map_vary_pu(summary_df):
+    METRIC_LABELS.update({
+        "Frac Undetected Chronic": "Undetected chronic (frac. of chronic pop.)",
+    })
+    fig = plot_undetected_heatmap_grid(
+        summary_df,
+        x_param="P homeless", y_param="P exit", facet_param="P undetected",
+        metric="Frac Undetected Chronic", agg="mean", cmap="rocket_r",
+        save_path="images/undetected_heatmap_grid.png",
+    )
 
         # TIMESERIES MEGA-PANEL COMPARING CHRONICITY COUNTS OVER TIME WITH VARYING P_H, P_E
+def timeseries_mega_panel():
+    with open("sweep_results/pu_pe_ph_timeseries.pkl", "rb") as f:
+        timeseries = pkl.load(f)     # dict_keys formatted (sim, p_h, p_e, p_u)
 
-# with open("sweep_results/pu_pe_ph_timeseries.pkl", "rb") as f:
-#     timeseries = pkl.load(f)     # dict_keys formatted (sim, p_h, p_e, p_u)
-#
-# p_u_values = sorted({k[3] for k in timeseries.keys()})
-#
-# for p_u in p_u_values:
-#     fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(90, 60))
-#
-#     for y in range(25, 126, 25):
-#         for z in range(125, 24, -25):
-#             thisrow = int((z / 25) - 1)
-#             thiscol = int((y / 25) - 1)
-#             thisax = axes[thisrow, thiscol]
-#             this_key = (0, y / 10000, z / 10000, p_u)
-#             matching_keys = [k for k in timeseries if k[1] == this_key[1] and k[2] == this_key[2] and k[3] == this_key[3]]
-#             is_legend_ax = (thisrow == 4 and thiscol == 4)
-#
-#             if y == 25 and thisrow != 4:
-#                 plot_timeseries_ax(timeseries, keys=matching_keys, ax=thisax,
-#                                     title=f"p_h={this_key[1]}, p_e={this_key[2]}",
-#                                     ylabel="P_e = " + str(z / 10000),
-#                                     show_legend=is_legend_ax)
-#             elif thisrow == 4 and y == 25:
-#                 plot_timeseries_ax(timeseries, keys=matching_keys, ax=thisax,
-#                                     title=f"p_h={this_key[1]}, p_e={this_key[2]}",
-#                                     xlabel="P_h = " + str(y / 10000),
-#                                     ylabel="P_e = " + str(z / 10000),
-#                                     show_legend=is_legend_ax)
-#             elif thisrow == 4 and y != 25:
-#                 plot_timeseries_ax(timeseries, keys=matching_keys, ax=thisax,
-#                                     title=f"p_h={this_key[1]}, p_e={this_key[2]}",
-#                                     xlabel="P_h = " + str(y / 10000),
-#                                     show_legend=is_legend_ax)
-#             else:
-#                 plot_timeseries_ax(timeseries, keys=matching_keys, ax=thisax,
-#                                     title=f"p_h={this_key[1]}, p_e={this_key[2]}",
-#                                     show_legend=is_legend_ax)
-#
-#     fig.subplots_adjust(left=0.06, bottom=0.06)
-#     fig.text(0.015, 0.5, "Count", rotation="vertical", fontsize=64, fontweight="bold", ha="center", va="center")
-#     fig.text(0.5, 0.015, "Timestep (Days)", rotation="horizontal", fontsize=64, fontweight="bold", ha="center", va="center")
-#
-#     fig.suptitle(f'Effects of P Homeless, P Exit on\nSystem-wide Chronicity Counts over Time (p_u = {p_u})',
-#                  fontsize=100, fontname="Georgia", fontweight="bold")
-#     fig.savefig(f'images/timeseries_panel_pu_{p_u}.jpg')
-#     plt.close(fig)
+    p_u_values = sorted({k[3] for k in timeseries.keys()})
+
+    for p_u in p_u_values:
+        fig, axes = plt.subplots(nrows=5, ncols=5, figsize=(90, 60))
+
+        for y in range(25, 126, 25):
+            for z in range(125, 24, -25):
+                thisrow = int((z / 25) - 1)
+                thiscol = int((y / 25) - 1)
+                thisax = axes[thisrow, thiscol]
+                this_key = (0, y / 10000, z / 10000, p_u)
+                matching_keys = [k for k in timeseries if k[1] == this_key[1] and k[2] == this_key[2] and k[3] == this_key[3]]
+                is_legend_ax = (thisrow == 4 and thiscol == 4)
+
+                if y == 25 and thisrow != 4:
+                    plot_timeseries_ax(timeseries, keys=matching_keys, ax=thisax,
+                                        title=f"p_h={this_key[1]}, p_e={this_key[2]}",
+                                        ylabel="P_e = " + str(z / 10000),
+                                        show_legend=is_legend_ax)
+                elif thisrow == 4 and y == 25:
+                    plot_timeseries_ax(timeseries, keys=matching_keys, ax=thisax,
+                                        title=f"p_h={this_key[1]}, p_e={this_key[2]}",
+                                        xlabel="P_h = " + str(y / 10000),
+                                        ylabel="P_e = " + str(z / 10000),
+                                        show_legend=is_legend_ax)
+                elif thisrow == 4 and y != 25:
+                    plot_timeseries_ax(timeseries, keys=matching_keys, ax=thisax,
+                                        title=f"p_h={this_key[1]}, p_e={this_key[2]}",
+                                        xlabel="P_h = " + str(y / 10000),
+                                        show_legend=is_legend_ax)
+                else:
+                    plot_timeseries_ax(timeseries, keys=matching_keys, ax=thisax,
+                                        title=f"p_h={this_key[1]}, p_e={this_key[2]}",
+                                        show_legend=is_legend_ax)
+
+        fig.subplots_adjust(left=0.06, bottom=0.06)
+        fig.text(0.015, 0.5, "Count", rotation="vertical", fontsize=64, fontweight="bold", ha="center", va="center")
+        fig.text(0.5, 0.015, "Timestep (Days)", rotation="horizontal", fontsize=64, fontweight="bold", ha="center", va="center")
+
+        fig.suptitle(f'Effects of P Homeless, P Exit on\nSystem-wide Chronicity Counts over Time (p_u = {p_u})',
+                    fontsize=100, fontname="Georgia", fontweight="bold")
+        fig.savefig(f'images/timeseries_panel_pu_{p_u}.jpg')
+        plt.close(fig)
 
     # STRIP PLOTS
+def strip_plots(summary_df):
+    for pu in [0.0025, 0.005, 0.0075, 0.01, 0.0125]:
+        summary_df_pu = summary_df.loc[summary_df['P undetected'] == pu]
+        fig3 = plot_undetected_stripplot(summary_df_pu, x_param="P homeless",pu = pu, hue_param="P exit",
+                                        save_path=f"images/undetected_stripplot_v2_{pu}.png")
+def send_help():
+    print("📊 Be sure you've generated necessary data first by running generate_dataset.py. Then create a visualization from the sweep_results/pu_pe_ph_summary.csv/.pkl files by running this script with one of the following visualization names as the argument:\n \
+            -  heat_map_vary_ph_pe\n \
+            -  heat_map_vary_pu\n \
+            -  strip_plots\n \
+            -  timeseries_mega_panel")
+    sys.exit(0)
 
-for pu in [0.0025, 0.005, 0.0075, 0.01, 0.0125]:
-    summary_df_pu = summary_df.loc[summary_df['P undetected'] == pu]
-    fig3 = plot_undetected_stripplot(summary_df_pu, x_param="P homeless",pu = pu, hue_param="P exit",
-                                     save_path=f"images/undetected_stripplot_v2_{pu}.png")
+if __name__ == "__main__":
+    req = sys.argv[1:][0]
+
+    if req == "help" or req == "--h":
+        send_help()
+
+    # IMPORT MODEL DATA
+    summary_df, timeseries = load_sweep(out_dir="sweep_results", tag="pu_pe_ph")
+
+    # IMPORT MODEL DATA and CONTROL FOR P_U
+    # Uncomment and adjust this line only if you wish to slice the DataFrame along a specified value or values for a probability.
+    # summary_df = summary_df.loc[summary_df['P undetected'] == XXX]
+    
+    if req == "heat_map_vary_ph_pe":
+        print("Generating a heat map with varying PH and PE")    
+        heat_map_vary_ph_pe(summary_df)
+    elif req == "heat_map_vary_pu":
+        print("Generating a heat map with varying PU")
+        heat_map_vary_pu(summary_df)
+    elif req == "strip_plots":
+        print("Generating strip plots")
+        strip_plots(summary_df)
+    elif req == "timeseries_mega_panel":
+        print("Generating a timeseries mega panel")
+        timeseries_mega_panel()
+    else:
+        print(f"❓ Unknown argument {req} \n")
+        send_help()
+
+
