@@ -17,7 +17,7 @@ if __name__ == "__main__":
         P_h_example, P_e_example, P_u_example,
         numsims=10, size_pop=20000, T=DEFAULT_T,
         record_timeseries=True, fix_known_bugs=True,
-        n_workers=None, base_seed=None,
+        n_workers=None, base_seed=5,
     )
 
     save_sweep(summary_df, timeseries, out_dir="sweep_results", tag="pu_pe_ph")

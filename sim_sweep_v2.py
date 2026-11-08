@@ -49,16 +49,18 @@ def run_sweep(P_h, P_e, P_u, numsims=5, size_pop=10_000, T=DEFAULT_T,
 
     summary_df = pd.DataFrame([{
         "P homeless": r.p_h, "P exit": r.p_e, "P undetected": r.p_u, "Simulation": r.sim,
-        "# Consecutive": r.n_consecutive, "# Episodic": r.n_episodic, "# Chronic": r.n_chronic,
+        "# Ever Consecutive": r.n_consecutive, "# Currently Consecutive": r.n_nowconsec,
+        "# Ever Episodic": r.n_episodic, "# Currently Episodic": r.n_nowepisodic, "# Chronic": r.n_chronic,
         "# Ever Homeless": r.n_ever_homeless, "# Undetected Chronic": r.n_undetected_chronic,
         "Frac Undetected Chronic": r.frac_undetected_chronic, "Wall Time (s)": r.wall_time_sec,
     } for r in results])
-    summary_df["Episodic as % Chronic"] = summary_df["# Episodic"] / summary_df["# Chronic"]
+    summary_df["Episodic as % Chronic"] = summary_df["# Currently Episodic"] / summary_df["# Chronic"]
 
     timeseries = {
         (r.sim, r.p_h, r.p_e, r.p_u): {
             "Times": r.times, "Now_homeless": r.now_homeless_ts, "Ever_homeless": r.ever_homeless_ts,
-            "Consecutive_counts": r.consecutive_ts, "Episodic_counts": r.episodic_ts,
+            "Consecutive_ever": r.consecutive_ts, "Now_consecutive": r.now_consec_ts, "Episodic_ever": r.episodic_ts,
+            "Now_episodic":r.now_episodic_ts
         } for r in results
     }
     print(f"Sweep complete: {len(jobs)} runs in {time.perf_counter()-t_start:.1f}s wall-clock "

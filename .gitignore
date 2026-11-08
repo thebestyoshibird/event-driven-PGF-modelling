@@ -1,2 +1,6 @@
 *.pkl
 **/.DS_Store
+*.jpg
+*.png
+.idea/
+__pycache__

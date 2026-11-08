@@ -9,8 +9,11 @@ performance_metrics = dict()
 
 summary_df, timeseries = load_sweep(out_dir="sweep_results", tag="pu_pe_ph")
 
-print(len(timeseries[(0, 0.0025, 0.0025, 0.0025)]['Times']))
-print(len(timeseries[(0, 0.0025, 0.0025, 0.0025)]['Now_consecutive']))
+# print(len(timeseries[(0, 0.0025, 0.0025, 0.0025)]['Times']))
+# print(len(timeseries[(0, 0.0025, 0.0025, 0.0025)]['Now_consecutive']))
+
+# print(timeseries[(0, 0.0025, 0.0025, 0.0025)]['Times'][0:25])
+print(timeseries[(0, 0.0025, 0.0025, 0.0025)].keys())
 
 # print(timeseries[(0, 0.0025, 0.0025, 0.0025)].keys())
 

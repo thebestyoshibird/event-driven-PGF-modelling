@@ -5,6 +5,7 @@ import heapq
 import time
 from dataclasses import dataclass, field
 import numpy as np
+import pandas as pd
 
 MONTH_LEN = 30.44      # days/month (~365/12)
 N_MONTHS = 36           # 36-month observation window
@@ -16,7 +17,7 @@ class Person:
         "amIhomeless", "num_eps", "num_months", "num_undetected_months",
         "consecutive", "episodic", "months_homeless", "months_detected",
         "this_episode_months", "ep_and_cons", "p_exit", "ever_episodic",
-        "ever_consecutive", "ever_homeless", "index",
+        "ever_consecutive", "ever_homeless", "index", "next_event"
     )
     # __slots__ is a small memory/speed optimization for large populations
 
@@ -36,6 +37,7 @@ class Person:
         self.ever_consecutive = False
         self.ever_homeless = False
         self.index = 0
+        self.next_event = "homeless"
 
     def _month_index(self, t):
         return min(int(t // MONTH_LEN), N_MONTHS - 1)    # // is a floor division
@@ -98,7 +100,7 @@ class Person:
         self.this_episode_months = 0
 
 
-def consecutive_test(months_homeless, this_month, fix_known_bugs=False):
+def consecutive_test(months_homeless, this_month, fix_known_bugs=True):
     """Checks the trailing 13 months (inclusive) for >12 True values."""
     counter = 0
     if fix_known_bugs:
@@ -108,6 +110,16 @@ def consecutive_test(months_homeless, this_month, fix_known_bugs=False):
     for x in range(this_month, lo, -1):
         if months_homeless[x]:
             counter += 1
+        if counter > 12:
+            return True
+    return False
+
+def detect_consec(person, this_month):
+    low = max(this_month - 13, -1)
+    counter = 0
+    for x in range(this_month, low, -1):
+        if person.months_homeless[x] and person.months_detected[x]:
+            counter +=1
         if counter > 12:
             return True
     return False
@@ -135,11 +147,13 @@ class RunResult:
     n_undetected_chronic: int
     frac_undetected_chronic: float
     wall_time_sec: float
-    times: list = field(default_factory=list)
-    now_homeless_ts: list = field(default_factory=list)
-    ever_homeless_ts: list = field(default_factory=list)
-    consecutive_ts: list = field(default_factory=list)
-    episodic_ts: list = field(default_factory=list)
+    # times: list = field(default_factory=list)
+    # now_homeless_ts: list = field(default_factory=list)
+    # ever_homeless_ts: list = field(default_factory=list)
+    # now_consec_ts: list = field(default_factory=list)
+    # consecutive_ts: list = field(default_factory=list)
+    # now_episodic_ts: list=field(default_factory=list)
+    # episodic_ts: list = field(default_factory=list)
 
 
 def _find_undetected_chronic_vectorized(population):
@@ -164,13 +178,8 @@ def _find_undetected_chronic_vectorized(population):
 
 
 def simulate_single_run(p_h, p_e_base, p_u, size_pop=200_000, T=DEFAULT_T, sim_id=0,
-                          seed=None, record_timeseries=True, fix_known_bugs=False):
-    """
-    V2 optimized single-simulation runner. Same event-driven algorithm, RNG draw
-    order, and per-agent stochastic rules as the original; changes are (a) O(1)
-    running counters instead of O(N) rescans every event, and (b) the opt-in
-    bug fixes described in Section 2.
-    """
+                          seed=None, fix_known_bugs=False):
+
     _start = time.perf_counter()
     rng = np.random.default_rng(seed)
 
@@ -182,11 +191,10 @@ def simulate_single_run(p_h, p_e_base, p_u, size_pop=200_000, T=DEFAULT_T, sim_i
             person.amIhomeless = True
             person.ever_homeless = True
             person.shouldIaddmonth(0, p_e_base)
-
-    now_homeless_count = sum(1 for p in population if p.amIhomeless)
-    ever_homeless_count = sum(1 for p in population if p.ever_homeless)
-    ever_consecutive_count = 0
-    ever_episodic_count = 0
+            if rng.random() < p_u:
+                person.next_event = "undetected"
+            else:
+                person.next_event = "exit"
 
     event_queue = []
     for i, person in enumerate(population):
@@ -199,75 +207,75 @@ def simulate_single_run(p_h, p_e_base, p_u, size_pop=200_000, T=DEFAULT_T, sim_i
         tau = _draw_tau(rng, p_h, p_u, p_e_base, event_type)
         heapq.heappush(event_queue, (tau, i, event_type))
 
-    times, now_ts, ever_ts, cons_ts, epis_ts = [], [], [], [], []
-    homeless_event = "homeless"  # mirrors the ORIGINAL's single reused scalar (issue #3)
-
     while event_queue:
         t, idx, event = heapq.heappop(event_queue)
+        print(list(x[0] for x in event_queue))
         if t >= T:
             break
         person = population[idx]
 
-        if event == "homeless":
+        if person.next_event == "homeless":
             if not person.amIhomeless:
-                was_ever_h = person.ever_homeless
-                was_cons, was_epis = person.ever_consecutive, person.ever_episodic
-                homeless_event = person.makemehomeless(t, p_u, p_e_base, rng, fix_known_bugs=fix_known_bugs)
-                now_homeless_count += 1
-                if person.ever_homeless and not was_ever_h:
-                    ever_homeless_count += 1
-                if person.ever_consecutive and not was_cons:
-                    ever_consecutive_count += 1
-                if person.ever_episodic and not was_epis:
-                    ever_episodic_count += 1
+                person.next_event = person.makemehomeless(t, p_u, p_e_base, rng, fix_known_bugs=fix_known_bugs)
             else:
                 person.shouldIaddmonth(t, p_e_base)
                 if fix_known_bugs:
-                    homeless_event = "exit" if rng.random() < (person.p_exit / (p_u + person.p_exit)) else "undetected"
-                # else: intentionally NOT reassigned - reproduces issue #3.
-        elif event == "undetected" and person.amIhomeless:
+                    person.next_event = "exit" if rng.random() < (person.p_exit / (p_u + person.p_exit)) else "undetected"
+        elif person.next_event == "undetected" and person.amIhomeless:
             person.addundetectedmonth(t)
-            homeless_event = "exit" if rng.random() < (person.p_exit / (p_u + person.p_exit)) else "undetected"
-        elif event == "exit" and person.amIhomeless:
-            was_cons, was_epis = person.ever_consecutive, person.ever_episodic
+            person.next_event = "exit" if rng.random() < (person.p_exit / (p_u + person.p_exit)) else "undetected"
+        elif person.next_event == "exit" and person.amIhomeless:
             person.exit_homelessness(t, p_e_base, fix_known_bugs=fix_known_bugs)
-            now_homeless_count -= 1
-            if person.ever_consecutive and not was_cons:
-                ever_consecutive_count += 1
-            if person.ever_episodic and not was_epis:
-                ever_episodic_count += 1
-            homeless_event = "homeless"
+            person.next_event = "homeless"
 
         person.num_months = sum(person.months_homeless[: person._month_index(t) + 1])
 
-        tau = _draw_tau(rng, p_h, p_u, person.p_exit, homeless_event)
-        heapq.heappush(event_queue, (t + tau, idx, homeless_event))
-
-        if record_timeseries:
-            times.append(t)
-            now_ts.append(now_homeless_count)
-            ever_ts.append(ever_homeless_count)
-            cons_ts.append(ever_consecutive_count)
-            epis_ts.append(ever_episodic_count)
+        tau = _draw_tau(rng, p_h, p_u, person.p_exit, person.next_event)
+        heapq.heappush(event_queue, (t + tau, idx, person.next_event))
 
     last_month = min(int((T - 1) // MONTH_LEN), N_MONTHS - 1)
     for person in population:
         person.num_months = sum(person.months_homeless[: last_month + 1])
         person.amIchronic(T, fix_known_bugs=fix_known_bugs)
 
-    n_consecutive = sum(1 for p in population if p.ever_consecutive)
+    n_consecutive = sum(1 for p in population if p.ever_consecutive)   # Total across all unique Persons for all months
     n_episodic = sum(1 for p in population if p.ever_episodic)
     n_ever_homeless = sum(1 for p in population if p.ever_homeless)
     n_chronic = n_consecutive + n_episodic
-    n_undetected, frac_undetected = _find_undetected_chronic_vectorized(population)
+    # n_undetected, frac_undetected = _find_undetected_chronic_vectorized(population)
+
+    monthly_results = pd.DataFrame(index = range(0, 36), columns = ['Now Homeless', 'Now Chronic', 'Now Episodic', 'Now Consecutive',
+                                              'Now Episodic Undetected', 'Now Consecutive Undetected'])
+    for month in range(0, 36):
+        now_h = 0
+        now_chr = 0
+        now_ep = 0
+        now_consec = 0
+        now_ep_und = 0
+        now_consec_und = 0
+        for person in population:
+            if person.months_homeless[month]:
+                now_h +=1
+            if month >= 12:
+                if person.amIchronic[month]:
+                    now_chr +=1
+                if consecutive_test(person.months_homeless, month):
+                    now_consec +=1
+                    if detect_consec(person, month) == False:
+                        now_consec_und +=1
+                if episodic_test(person.months_homeless, month):
+                    now_ep +=1
+                    if detect_episodic(person, month) == False:
+                        now_ep_und +=1
+        monthly_results.add([now_h, now_chr, now_ep, now_consec, now_ep_und, now_consec_und])
+
 
     wall = time.perf_counter() - _start
     return RunResult(
         p_h=p_h, p_e=p_e_base, p_u=p_u, sim=sim_id,
-        n_consecutive=n_consecutive, n_episodic=n_episodic, n_chronic=n_chronic,
+        n_consecutive=n_consecutive,
+        n_episodic=n_episodic,
+        n_chronic=n_chronic,
         n_ever_homeless=n_ever_homeless,
-        n_undetected_chronic=n_undetected, frac_undetected_chronic=frac_undetected,
-        wall_time_sec=wall,
-        times=times, now_homeless_ts=now_ts, ever_homeless_ts=ever_ts,
-        consecutive_ts=cons_ts, episodic_ts=epis_ts,
+        wall_time_sec=wall
     )
