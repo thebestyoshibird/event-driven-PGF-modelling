@@ -98,7 +98,7 @@ class Person:
         self.this_episode_months = 0
 
 
-def consecutive_test(months_homeless, this_month, fix_known_bugs=False):
+def consecutive_test(months_homeless, this_month, fix_known_bugs=True):
     """Checks the trailing 13 months (inclusive) for >12 True values."""
     counter = 0
     if fix_known_bugs:
@@ -164,7 +164,7 @@ def _find_undetected_chronic_vectorized(population):
 
 
 def simulate_single_run(p_h, p_e_base, p_u, size_pop=200_000, T=DEFAULT_T, sim_id=0,
-                          seed=None, record_timeseries=True, fix_known_bugs=False):
+                          seed=None, record_timeseries=True, fix_known_bugs=True):
     """
     V2 optimized single-simulation runner. Same event-driven algorithm, RNG draw
     order, and per-agent stochastic rules as the original; changes are (a) O(1)
